@@ -238,24 +238,18 @@ body{font-family:'Assistant',sans-serif;background:var(--bg);color:var(--text);
 // ══════════════════════════════════════════════════════════════
 // CONFIG — paste your Apps Script /exec URL here
 // ══════════════════════════════════════════════════════════════
-const API = 'https://script.google.com/macros/s/AKfycbyEjzqug3kCyXfv2jvCT098tRDZ4zwQ_9y1ATpN9CPS55ZBDh8KR2cijBBbp7IrI5QV/exec';
+const API = 'PASTE_YOUR_APPS_SCRIPT_URL_HERE';
 
 // ══════════════════════════════════════════════════════════════
-// API HELPERS — replace google.script.run with fetch()
+// API HELPER — all requests use GET to avoid CORS issues
 // ══════════════════════════════════════════════════════════════
-async function apiGet(params) {
+async function api(params) {
   const url = new URL(API);
-  Object.entries(params).forEach(([k,v]) => url.searchParams.set(k,v));
-  const res = await fetch(url.toString(), { method:'GET' });
-  return res.json();
-}
-
-async function apiPost(body) {
-  const res = await fetch(API, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
+  Object.entries(params).forEach(([k,v]) => {
+    url.searchParams.set(k, typeof v === 'object' ? JSON.stringify(v) : v);
   });
+  const res = await fetch(url.toString(), { method:'GET', mode:'cors' });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
   return res.json();
 }
 
@@ -366,7 +360,7 @@ async function submitEmailScreen() {
     }
     btn.disabled=true; spin.style.display='block';
     try {
-      const res = await apiGet({ action:'getState', email });
+      const res = await api({ action:'getState', email });
       spin.style.display='none'; btn.disabled=false;
       const pwGroup=document.getElementById('pw-group');
       const pwLabel=document.getElementById('pw-label');
@@ -396,13 +390,13 @@ async function submitEmailScreen() {
     }
     btn.disabled=true; spin.style.display='block';
     try {
-      const res = await apiPost({ action:'verifyOrSetPassword', email, password });
+      const res = await api({ action:'verifyOrSetPassword', email, password });
       if (!res.ok) {
         spin.style.display='none'; btn.disabled=false;
         errEl.textContent = res.error==='wrong password' ? 'סיסמה שגויה. נסו שוב.' : 'שגיאה, נסו שוב.';
         errEl.style.display='block'; return;
       }
-      const state = await apiGet({ action:'getState', email });
+      const state = await api({ action:'getState', email });
       spin.style.display='none';
       gEmail=email; gAnswers=state.answers||{}; gSubmitted=state.submitted;
       gScore=state.score; gFirstName=state.firstName||''; gLastName=state.lastName||''; gVersion=state.version||null;
@@ -450,7 +444,7 @@ async function confirmProfile() {
   errEl.style.display='none';
   btn.disabled=true; btn.textContent='שומר...';
   try {
-    const res = await apiPost({ action:'setProfile', firstName:first, lastName:last, email:gEmail, version:gPendingVer||gVersion });
+    const res = await api({ action:'setProfile', firstName:first, lastName:last, email:gEmail, version:gPendingVer||gVersion });
     if (res.ok || res.locked) {
       gFirstName=first; gLastName=last;
       gVersion = res.locked ? res.version : (gPendingVer||gVersion);
@@ -526,7 +520,7 @@ function autoSave(key,val) {
   clearTimeout(saveTimer);
   saveTimer=setTimeout(async () => {
     try {
-      await apiPost({ action:'saveAnswer', email:gEmail, key, value:val });
+      await api({ action:'saveAnswer', email:gEmail, key, value:val });
       showToast('נשמר ✓');
     } catch(e) { showToast('שגיאת שמירה ✗'); }
   }, 600);
@@ -555,7 +549,7 @@ async function submitQuiz() {
   if (missing.length) { alert('יש לענות על כל השאלות:\n\n'+missing.join('\n')); return; }
   const btn=document.getElementById('submit-btn'); btn.disabled=true; btn.textContent='שולח...';
   try {
-    const res = await apiPost({ action:'submitQuiz', email:gEmail, answers:gAnswers, version:gVersion });
+    const res = await api({ action:'submitQuiz', email:gEmail, answers:gAnswers, version:gVersion });
     if (res.ok || res.alreadySubmitted) {
       gSubmitted=true; if(res.score) gScore=res.score; showSuccess();
     } else { btn.disabled=false; btn.textContent='📤 שליחת הטופס'; alert('שגיאה בשליחה, נסו שוב.'); }
