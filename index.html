@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>זיהוי יצירות והרכבים</title>
+<link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&family=Frank+Ruhl+Libre:wght@700;900&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#f4f1eb;--surface:#fff;--surface2:#f9f7f3;--border:#ddd8cc;
+  --accent:#2c5f8a;--accent-lt:#e6eff7;--amber:#7a4f2d;
+  --text:#1a1a2a;--muted:#6b6880;
+  --green:#2a7a4f;--green-bg:#e8f5ee;
+  --red:#c0392b;--red-bg:#fdecea;
+  --sel:#2c5f8a;--sel-txt:#fff;
+  --radius:10px;--tap:48px;
+}
+html{font-size:16px}
+body{font-family:'Assistant',sans-serif;background:var(--bg);color:var(--text);
+  min-height:100vh;min-height:-webkit-fill-available;direction:rtl;-webkit-text-size-adjust:100%}
+#loading{min-height:100vh;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:18px;background:linear-gradient(160deg,#e6eff7,#f4f1eb);padding:24px;text-align:center}
+.spinner{width:44px;height:44px;border:4px solid var(--border);border-top-color:var(--accent);
+  border-radius:50%;animation:spin .9s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#loading p{color:var(--muted)}
+#error-screen{display:none;min-height:100vh;align-items:center;justify-content:center;
+  padding:24px;background:var(--red-bg)}
+.error-card{background:#fff;border-radius:16px;padding:36px 28px;max-width:380px;width:100%;
+  text-align:center;box-shadow:0 4px 24px rgba(0,0,0,.08)}
+.error-card .icon{font-size:48px;margin-bottom:12px}
+.error-card h2{font-size:1.3rem;color:var(--red);margin-bottom:10px}
+.error-card p{color:var(--muted);font-size:.93rem}
+#email-screen{display:none;min-height:100vh;align-items:center;justify-content:center;
+  padding:24px;background:linear-gradient(160deg,#e6eff7,#f4f1eb)}
+.email-card{background:var(--surface);border-radius:18px;padding:40px 28px;
+  max-width:400px;width:100%;box-shadow:0 6px 32px rgba(44,95,138,.13);text-align:center}
+.email-card .music-icon{font-size:48px;margin-bottom:10px}
+.email-card h1{font-family:'Frank Ruhl Libre',serif;font-size:1.7rem;color:var(--accent);margin-bottom:6px}
+.email-card .sub{font-size:.88rem;color:var(--muted);margin-bottom:24px}
+.email-spinner{display:none;width:20px;height:20px;border:3px solid var(--border);
+  border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 10px}
+#profile-screen{display:none;min-height:100vh;align-items:flex-start;justify-content:center;
+  padding:32px 16px 48px;background:linear-gradient(160deg,#e6eff7,#f4f1eb);overflow-y:auto}
+.profile-card{background:var(--surface);border-radius:18px;padding:36px 28px;
+  max-width:440px;width:100%;box-shadow:0 6px 32px rgba(44,95,138,.13);text-align:center}
+.profile-card .music-icon{font-size:48px;margin-bottom:10px}
+.profile-card h1{font-family:'Frank Ruhl Libre',serif;font-size:1.7rem;color:var(--accent);margin-bottom:20px}
+.field-group{margin-bottom:14px;text-align:right}
+.field-label{display:block;font-weight:700;font-size:.88rem;color:var(--text);margin-bottom:6px}
+.field-input{width:100%;padding:12px 14px;border:2px solid var(--border);border-radius:var(--radius);
+  font-family:'Assistant',sans-serif;font-size:1rem;color:var(--text);background:var(--surface2);
+  direction:rtl;transition:border-color .15s;-webkit-appearance:none;appearance:none}
+.field-input:focus{outline:none;border-color:var(--accent)}
+.field-input.ltr{direction:ltr;text-align:left}
+.name-row{display:flex;gap:10px;margin-bottom:14px}
+.name-row .field-group{flex:1;margin-bottom:0}
+.ver-section{margin-bottom:18px;text-align:right}
+.ver-section-label{font-weight:700;font-size:.88rem;color:var(--text);margin-bottom:8px;display:block}
+.ver-btns{display:flex;gap:10px}
+.ver-btn{flex:1;height:52px;border:2.5px solid var(--border);border-radius:var(--radius);
+  background:var(--surface2);font-family:'Assistant',sans-serif;font-size:1.05rem;
+  font-weight:700;color:var(--muted);cursor:pointer;transition:all .15s;touch-action:manipulation}
+.ver-btn.chosen{border-color:var(--accent);background:var(--accent-lt);color:var(--accent)}
+.gate-error{background:var(--red-bg);color:var(--red);border-radius:var(--radius);
+  padding:9px 13px;font-size:.86rem;margin-bottom:12px;display:none;text-align:right}
+.confirm-btn{width:100%;height:var(--tap);background:var(--accent);color:#fff;border:none;
+  border-radius:var(--radius);font-family:'Assistant',sans-serif;font-size:1.05rem;
+  font-weight:700;cursor:pointer;touch-action:manipulation;-webkit-appearance:none;appearance:none}
+.confirm-btn:active{background:#1e4a6e}
+.confirm-btn:disabled{background:var(--border);color:var(--muted)}
+#app{display:none}
+.topbar{background:var(--accent);color:#fff;padding:0 16px;height:56px;
+  display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:50;box-shadow:0 2px 8px rgba(0,0,0,.18)}
+.topbar-title{font-family:'Frank Ruhl Libre',serif;font-size:1.05rem;font-weight:700}
+.topbar-sub{font-size:.72rem;opacity:.82;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.topbar-badge{background:rgba(255,255,255,.2);border-radius:20px;padding:3px 10px;font-size:.8rem;font-weight:700;white-space:nowrap}
+.progress-wrap{background:#d8d4cc;height:5px;position:sticky;top:56px;z-index:49}
+.progress-fill{height:5px;background:linear-gradient(90deg,#4a9fd4,var(--accent));transition:width .4s ease}
+.quiz-body{max-width:600px;margin:0 auto;padding:16px 12px 80px}
+.save-toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);
+  background:rgba(30,30,50,.82);color:#fff;font-size:.82rem;padding:7px 18px;
+  border-radius:30px;opacity:0;transition:opacity .3s,transform .3s;
+  pointer-events:none;white-space:nowrap;z-index:200}
+.save-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.segment{background:var(--surface);border-radius:14px;margin-bottom:16px;overflow:hidden;
+  box-shadow:0 2px 10px rgba(0,0,0,.07);border:1px solid var(--border);animation:fadeUp .3s ease both}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.seg-header{background:var(--accent);color:#fff;padding:11px 16px;display:flex;align-items:center;gap:10px}
+.seg-num{width:28px;height:28px;background:rgba(255,255,255,.22);border-radius:50%;
+  display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.9rem;flex-shrink:0}
+.seg-title{font-family:'Frank Ruhl Libre',serif;font-weight:700;font-size:1rem}
+.seg-body{padding:14px}
+.q-block{padding-bottom:14px;margin-bottom:14px;border-bottom:1px dashed var(--border)}
+.q-block:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0}
+.q-label{display:flex;align-items:center;gap:6px;font-weight:700;font-size:.93rem;color:var(--amber);margin-bottom:10px}
+.options{display:flex;flex-wrap:wrap;gap:8px}
+.opt-btn{min-height:44px;padding:9px 14px;border:2px solid var(--border);border-radius:30px;
+  background:var(--surface2);font-family:'Assistant',sans-serif;font-size:.9rem;font-weight:600;
+  color:var(--text);cursor:pointer;touch-action:manipulation;user-select:none;line-height:1.3;
+  transition:border-color .12s,background .12s,color .12s;-webkit-appearance:none;appearance:none}
+.opt-btn:active{opacity:.7}
+.opt-btn.selected{background:var(--sel);border-color:var(--sel);color:var(--sel-txt)}
+.opt-btn.correct-ans{background:var(--green);border-color:var(--green);color:#fff}
+.opt-btn.wrong-ans{background:var(--red);border-color:var(--red);color:#fff;text-decoration:line-through}
+.submit-bar{position:fixed;bottom:0;right:0;left:0;background:rgba(244,241,235,.97);
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+  padding:10px 16px 20px;padding-bottom:max(20px,env(safe-area-inset-bottom));
+  box-shadow:0 -2px 12px rgba(0,0,0,.1);z-index:50}
+.progress-label{font-size:.78rem;color:var(--muted);text-align:center;margin-bottom:8px}
+.submit-btn{width:100%;height:52px;background:var(--green);color:#fff;border:none;
+  border-radius:var(--radius);font-family:'Assistant',sans-serif;font-size:1.05rem;
+  font-weight:700;cursor:pointer;touch-action:manipulation;-webkit-appearance:none;appearance:none}
+.submit-btn:active{background:#1f5c39}
+.submit-btn:disabled{background:var(--border);color:var(--muted)}
+#success-screen{display:none;min-height:100vh;align-items:flex-start;justify-content:center;
+  padding:24px 16px 48px;background:linear-gradient(160deg,var(--green-bg),var(--bg));overflow-y:auto}
+.success-card{background:var(--surface);border-radius:18px;padding:36px 22px 32px;
+  max-width:500px;width:100%;text-align:center;box-shadow:0 6px 32px rgba(42,122,79,.15)}
+.success-card .check{font-size:60px;margin-bottom:12px}
+.success-card h2{font-family:'Frank Ruhl Libre',serif;font-size:1.8rem;color:var(--green);margin-bottom:8px}
+.score-badge{display:inline-block;background:var(--green-bg);color:var(--green);
+  border:2px solid var(--green);border-radius:30px;padding:6px 22px;font-size:1.2rem;font-weight:700;margin:12px 0 16px}
+.success-card p{color:var(--muted);font-size:.92rem;margin-bottom:4px}
+.success-name{color:var(--accent);font-weight:700}
+.review-wrap{margin-top:24px;text-align:right;width:100%}
+.review-wrap h3{font-family:'Frank Ruhl Libre',serif;font-size:1.05rem;color:var(--text);margin-bottom:10px;text-align:center}
+.review-segment{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:10px;overflow:hidden}
+.review-seg-header{background:var(--accent);color:#fff;padding:7px 12px;font-weight:700;font-size:.85rem;display:flex;align-items:center;gap:8px}
+.review-seg-num{background:rgba(255,255,255,.22);border-radius:50%;width:22px;height:22px;
+  display:flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:700;flex-shrink:0}
+.review-body{padding:8px 12px}
+.review-row{display:flex;justify-content:space-between;align-items:flex-start;
+  gap:8px;padding:6px 0;border-bottom:1px dashed var(--border);font-size:.84rem}
+.review-row:last-child{border-bottom:none;padding-bottom:0}
+.review-label{color:var(--muted);font-weight:600;flex-shrink:0;max-width:40%}
+.review-answer{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+.review-given{font-weight:700;display:flex;align-items:center;gap:4px}
+.review-given.ok{color:var(--green)}
+.review-given.bad{color:var(--red);text-decoration:line-through}
+.review-correct-hint{font-size:.78rem;color:var(--green);font-weight:600}
+.submitted-banner{background:var(--green-bg);border:1.5px solid var(--green);border-radius:var(--radius);
+  padding:10px 14px;color:var(--green);font-weight:700;font-size:.92rem;text-align:center;margin-bottom:14px}
+</style>
+</head>
+<body>
+
+<div id="loading"><div class="spinner"></div><p>טוען...</p></div>
+
+<div id="error-screen">
+  <div class="error-card">
+    <div class="icon">⚠️</div><h2>שגיאה</h2>
+    <p id="error-msg">אירעה שגיאה. נסו לרענן את הדף.</p>
+  </div>
+</div>
+
+<div id="email-screen">
+  <div class="email-card">
+    <div class="music-icon">🎼</div>
+    <h1>זיהוי יצירות והרכבים</h1>
+    <p class="sub">הזינו את כתובת הדוא"ל שלכם</p>
+    <div class="field-group" style="text-align:right">
+      <label class="field-label" for="email-inp">כתובת דוא"ל</label>
+      <input class="field-input ltr" id="email-inp" type="email" placeholder="name@gmail.com" autocomplete="email"/>
+    </div>
+    <div class="field-group" id="pw-group" style="text-align:right;display:none">
+      <label class="field-label" id="pw-label" for="pw-inp">סיסמה</label>
+      <input class="field-input ltr" id="pw-inp" type="password" placeholder="סיסמה" autocomplete="new-password"/>
+      <p id="pw-hint" style="font-size:.78rem;color:var(--muted);margin-top:5px;text-align:right"></p>
+    </div>
+    <div class="gate-error" id="email-screen-error"></div>
+    <div class="email-spinner" id="email-spinner"></div>
+    <button class="confirm-btn" id="email-next-btn" onclick="submitEmailScreen()">המשך ←</button>
+  </div>
+</div>
+
+<div id="profile-screen">
+  <div class="profile-card">
+    <div class="music-icon">🎼</div>
+    <h1>זיהוי יצירות והרכבים</h1>
+    <p id="profile-email-display" style="font-size:.85rem;color:var(--muted);margin-bottom:18px;direction:ltr;word-break:break-all"></p>
+    <div class="name-row">
+      <div class="field-group">
+        <label class="field-label" for="inp-last">שם משפחה</label>
+        <input class="field-input" id="inp-last" type="text" placeholder="שם משפחה" autocomplete="family-name"/>
+      </div>
+      <div class="field-group">
+        <label class="field-label" for="inp-first">שם פרטי</label>
+        <input class="field-input" id="inp-first" type="text" placeholder="שם פרטי" autocomplete="given-name"/>
+      </div>
+    </div>
+    <div class="ver-section">
+      <span class="ver-section-label">בחרו גרסה — לא ניתן לשנות לאחר מכן</span>
+      <div class="ver-btns">
+        <button class="ver-btn" id="btn-ver-a" onclick="pickVer('א')">טור א</button>
+        <button class="ver-btn" id="btn-ver-b" onclick="pickVer('ב')">טור ב</button>
+      </div>
+    </div>
+    <div class="gate-error" id="gate-error"></div>
+    <button class="confirm-btn" id="confirm-btn" onclick="confirmProfile()">כניסה ←</button>
+  </div>
+</div>
+
+<div id="app">
+  <div class="topbar">
+    <div>
+      <div class="topbar-title" id="app-name"></div>
+      <div class="topbar-sub" id="app-email"></div>
+    </div>
+    <span class="topbar-badge" id="app-ver"></span>
+  </div>
+  <div class="progress-wrap"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+  <div class="quiz-body" id="quiz-body"></div>
+  <div class="submit-bar" id="submit-bar">
+    <div class="progress-label" id="progress-label"></div>
+    <button class="submit-btn" id="submit-btn" onclick="submitQuiz()">📤 שליחת הטופס</button>
+  </div>
+</div>
+
+<div id="success-screen">
+  <div class="success-card">
+    <div class="check">✅</div>
+    <h2>הטופס נשלח!</h2>
+    <div class="score-badge" id="score-display"></div>
+    <p><span class="success-name" id="success-name"></span></p>
+    <p style="font-size:.82rem;direction:ltr" id="success-email-disp"></p>
+    <p>גרסה: <strong id="success-ver"></strong></p>
+    <div class="review-wrap" id="review-container"></div>
+  </div>
+</div>
+
+<div class="save-toast" id="save-toast">נשמר ✓</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+// CONFIG — paste your Apps Script /exec URL here
+// ══════════════════════════════════════════════════════════════
+const API = 'PASTE_YOUR_APPS_SCRIPT_URL_HERE';
+
+// ══════════════════════════════════════════════════════════════
+// API HELPERS — replace google.script.run with fetch()
+// ══════════════════════════════════════════════════════════════
+async function apiGet(params) {
+  const url = new URL(API);
+  Object.entries(params).forEach(([k,v]) => url.searchParams.set(k,v));
+  const res = await fetch(url.toString(), { method:'GET' });
+  return res.json();
+}
+
+async function apiPost(body) {
+  const res = await fetch(API, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  return res.json();
+}
+
+// ══════════════════════════════════════════════════════════════
+// QUIZ DATA
+// ══════════════════════════════════════════════════════════════
+const WHO_OPTS     = ["תזמורת קאמרית קלאסית","רביעיית מיתרים","פסנתר מודרני","פסנתר פטישים עתיק","צ'מבלו"];
+const WHO_OPTS_A2  = ["תזמורת קאמרית קלאסית","רביעיית מיתרים","פסנתר מודרני","פסנתר פטישים עתיק","צ'מבלו","תזמורת מיתרים"];
+const GENRE_OPTS   = ["סונטה לפסנתר","יצירה לצ'מבלו","ריקוד לפסנתר","קונצ'רטו","סימפוניה","רביעיית מיתרים"];
+const GENRE_B2     = ["סונטה לפסנתר","יצירה לצ'מבלו סולו","ריקוד לפסנתר","קונצ'רטו","סימפוניה","רביעיית מיתרים"];
+const SPEED_OPTS   = ["איטי","בינוני","מהיר"];
+const TEXTURE_OPTS = ["הומופוני","פוליפוני"];
+const TEXTURE_B9   = ["הומופוני","פוליפוני","מעורב"];
+const METER_OPTS   = ["משולש","זוגי"];
+const DANCE_OPTS   = ["ואלס","מינואט","לא ריקוד"];
+const MOV_A        = ["ראשון","שני","מינואט (רק בסימפוניה וברביעית מיתרים)"];
+const MOV_B_END    = ["שני","מינואט (רק בסימפוניה וברביעית מיתרים)","אחרון"];
+const MOV_B_START  = ["ראשון","שני","מינואט (רק בסימפוניה וברביעית מיתרים)"];
+
+const QUIZ_DEF = {
+  'א':[
+    {id:'a1',num:1,qs:[{id:'a1_genre',icon:'🎭',label:"ז'אנר",opts:GENRE_OPTS},{id:'a1_movement',icon:'🔢',label:'מספר הפרק',opts:MOV_A},{id:'a1_meter',icon:'🎼',label:'משקל',opts:METER_OPTS}]},
+    {id:'a2',num:2,qs:[{id:'a2_meter',icon:'🎼',label:'משקל',opts:METER_OPTS},{id:'a2_who',icon:'🎹',label:'מי מנגן',opts:WHO_OPTS_A2},{id:'a2_dance',icon:'💃',label:'ריקוד',opts:DANCE_OPTS}]},
+    {id:'a3',num:3,qs:[{id:'a3_genre',icon:'🎭',label:"ז'אנר",opts:GENRE_OPTS},{id:'a3_speed',icon:'⏱️',label:'מהירות',opts:SPEED_OPTS},{id:'a3_texture',icon:'🎵',label:'מרקם',opts:TEXTURE_OPTS}]},
+    {id:'a4',num:4,qs:[{id:'a4_who',icon:'🎹',label:'מי מנגן',opts:WHO_OPTS},{id:'a4_texture',icon:'🎵',label:'מרקם',opts:TEXTURE_OPTS},{id:'a4_dance',icon:'💃',label:'ריקוד',opts:DANCE_OPTS}]},
+    {id:'a5',num:5,qs:[{id:'a5_genre',icon:'🎭',label:"ז'אנר",opts:GENRE_OPTS},{id:'a5_movement',icon:'🔢',label:'מספר הפרק',opts:MOV_A},{id:'a5_texture',icon:'🎵',label:'מרקם',opts:TEXTURE_OPTS},{id:'a5_meter',icon:'🎼',label:'משקל',opts:METER_OPTS}]},
+    {id:'a6',num:6,qs:[{id:'a6_who',icon:'🎹',label:'מי מנגן',opts:WHO_OPTS},{id:'a6_speed',icon:'⏱️',label:'מהירות',opts:SPEED_OPTS},{id:'a6_texture',icon:'🎵',label:'מרקם',opts:TEXTURE_OPTS},{id:'a6_dance',icon:'💃',label:'ריקוד',opts:DANCE_OPTS}]},
+    {id:'a7',num:7,qs:[{id:'a7_genre',icon:'🎭',label:"ז'אנר",opts:GENRE_OPTS},{id:'a7_speed',icon:'⏱️',label:'מהירות',opts:SPEED_OPTS},{id:'a7_texture',icon:'🎵',label:'מרקם',opts:TEXTURE_OPTS},{id:'a7_dance',icon:'💃',label:'ריקוד',opts:DANCE_OPTS}]},
+    {id:'a8',num:8,qs:[{id:'a8_who',icon:'🎹',label:'מי מנגן',opts:WHO_OPTS},{id:'a8_speed',icon:'⏱️',label:'מהירות',opts:SPEED_OPTS},{id:'a8_genre',icon:'🎭',label:"ז'אנר",opts:GENRE_OPTS}]},
+    {id:'a9',num:9,qs:[{id:'a9_genre',icon:'🎭',label:"ז'אנר",opts:GENRE_OPTS},{id:'a9_texture',icon:'🎵',label:'מרקם',opts:TEXTURE_OPTS},{id:'a9_dance',icon:'💃',label:'ריקוד',opts:DANCE_OPTS},{id:'a9_who',icon:'🎹',label:'מי מנגן',opts:WHO_OPTS},{id:'a9_speed',icon:'⏱️',label:'מהירות',opts:SPEED_OPTS},{id:'a9_movement',icon:'🔢',label:'מספר הפרק',opts:MOV_A}]},
+  ],
+  'ב':[
+    {id:'b1',num:1,qs:[{id:'b1_who',icon:'🎹',label:'מי מנגן',opts:WHO_OPTS},{id:'b1_speed',icon:'⏱️',label:'מהירות',opts:SPEED_OPTS},{id:'b1_dance',icon:'💃',label:'ריקוד',opts:DANCE_OPTS}]},
+    {id:'b2',num:2,qs:[{id:'b2_genre',icon:'🎭',label:"ז'אנר",opts:GENRE_B2},{id:'b2_texture',icon:'🎵',label:'מרקם',opts:TEXTURE_OPTS},{id:'b2_meter',icon:'🎼',label:'משקל',opts:METER_OPTS}]},
+    {id:'b3',num:3,qs:[{id:'b3_who',icon:'🎹',label:'מי מנגן',opts:WHO_OPTS},{id:'b3_speed',icon:'⏱️',label:'מהירות',opts:SPEED_OPTS},{id:'b3_dance',icon:'💃',label:'ריקוד',opts:DANCE_OPTS}]},
+    {id:'b4',num:4,qs:[{id:'b4_genre',icon:'🎭',label:"ז'אנר",opts:GENRE_OPTS},{id:'b4_movement',icon:'🔢',label:'מספר הפרק',opts:MOV_B_END},{id:'b4_speed',icon:'⏱️',label:'מהירות',opts:SPEED_OPTS},{id:'b4_meter',icon:'🎼',label:'משקל',opts:METER_OPTS}]},
+    {id:'b5',num:5,qs:[{id:'b5_texture',icon:'🎵',label:'מרקם',opts:TEXTURE_OPTS},{id:'b5_who',icon:'🎹',label:'מי מנגן',opts:WHO_OPTS},{id:'b5_speed',icon:'⏱️',label:'מהירות',opts:SPEED_OPTS}]},
+    {id:'b6',num:6,qs:[{id:'b6_genre',icon:'🎭',label:"ז'אנר",opts:GENRE_OPTS},{id:'b6_movement',icon:'🔢',label:'מספר הפרק',opts:MOV_B_END},{id:'b6_meter',icon:'🎼',label:'משקל',opts:METER_OPTS}]},
+    {id:'b7',num:7,qs:[{id:'b7_who',icon:'🎹',label:'מי מנגן',opts:WHO_OPTS},{id:'b7_movement',icon:'🔢',label:'מספר הפרק',opts:MOV_B_START},{id:'b7_meter',icon:'🎼',label:'משקל',opts:METER_OPTS}]},
+    {id:'b8',num:8,qs:[{id:'b8_genre',icon:'🎭',label:"ז'אנר",opts:GENRE_OPTS},{id:'b8_movement',icon:'🔢',label:'מספר הפרק',opts:MOV_B_START},{id:'b8_texture',icon:'🎵',label:'מרקם',opts:TEXTURE_OPTS}]},
+    {id:'b9',num:9,qs:[{id:'b9_dance',icon:'💃',label:'ריקוד (א)',opts:DANCE_OPTS},{id:'b9_who',icon:'🎹',label:'מי מנגן',opts:WHO_OPTS},{id:'b9_speed',icon:'⏱️',label:'מהירות',opts:SPEED_OPTS},{id:'b9_genre',icon:'🎭',label:"ז'אנר",opts:GENRE_OPTS},{id:'b9_texture',icon:'🎵',label:'מרקם',opts:TEXTURE_B9},{id:'b9_dance2',icon:'💃',label:'ריקוד (ב)',opts:DANCE_OPTS}]},
+  ]
+};
+
+const ANSWER_KEYS = {
+  'a1_genre':'רביעיית מיתרים','a1_movement':'מינואט (רק בסימפוניה וברביעית מיתרים)','a1_meter':'משולש',
+  'a2_meter':'זוגי','a2_who':["צ'מבלו",'תזמורת מיתרים'],'a2_dance':'לא ריקוד',
+  'a3_genre':'ריקוד לפסנתר','a3_speed':'מהיר','a3_texture':'הומופוני',
+  'a4_who':'תזמורת קאמרית קלאסית','a4_texture':'הומופוני','a4_dance':'מינואט',
+  'a5_genre':"קונצ'רטו",'a5_movement':'ראשון','a5_texture':'הומופוני','a5_meter':'זוגי',
+  'a6_who':'תזמורת קאמרית קלאסית','a6_speed':'מהיר','a6_texture':'הומופוני','a6_dance':'לא ריקוד',
+  'a7_genre':'סימפוניה','a7_speed':'בינוני','a7_texture':'פוליפוני','a7_dance':'מינואט',
+  'a8_who':'תזמורת קאמרית קלאסית','a8_speed':'איטי','a8_genre':'סימפוניה',
+  'a9_genre':'ריקוד לפסנתר','a9_texture':'הומופוני','a9_dance':'ואלס',
+  'a9_who':'רביעיית מיתרים','a9_speed':['איטי','מהיר'],'a9_movement':'ראשון',
+  'b1_who':'רביעיית מיתרים','b1_speed':'בינוני','b1_dance':'מינואט',
+  'b2_genre':"קונצ'רטו",'b2_texture':'פוליפוני','b2_meter':'זוגי',
+  'b3_who':'פסנתר מודרני','b3_speed':'מהיר','b3_dance':'ואלס',
+  'b4_genre':'סימפוניה','b4_movement':'מינואט (רק בסימפוניה וברביעית מיתרים)','b4_speed':'בינוני','b4_meter':'משולש',
+  'b5_texture':'הומופוני','b5_who':'תזמורת קאמרית קלאסית','b5_speed':'מהיר',
+  'b6_genre':'סימפוניה','b6_movement':'אחרון','b6_meter':'זוגי',
+  'b7_who':'תזמורת קאמרית קלאסית','b7_movement':'מינואט (רק בסימפוניה וברביעית מיתרים)','b7_meter':'משולש',
+  'b8_genre':'סימפוניה','b8_movement':'שני','b8_texture':'הומופוני',
+  'b9_dance':'ואלס','b9_who':'פסנתר מודרני','b9_speed':'מהיר',
+  'b9_genre':'רביעיית מיתרים','b9_texture':['הומופוני','מעורב'],'b9_dance2':'לא ריקוד',
+};
+
+// ══════════════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════════════
+let gEmail='',gFirstName='',gLastName='',gVersion=null;
+let gAnswers={},gSubmitted=false,gScore=null,gPendingVer=null;
+let gEmailScreenStep='email';
+
+// ══════════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════════
+window.addEventListener('load', async () => {
+  if (API === 'PASTE_YOUR_APPS_SCRIPT_URL_HERE') {
+    showError('יש להגדיר את כתובת ה-API בקובץ index.html');
+    return;
+  }
+  hide('loading');
+  showEmailScreen();
+});
+
+// ══════════════════════════════════════════════════════════════
+// EMAIL SCREEN
+// ══════════════════════════════════════════════════════════════
+function showEmailScreen() {
+  gEmailScreenStep = 'email';
+  show('email-screen','flex');
+  hide('pw-group');
+  document.getElementById('email-inp').addEventListener('keydown', e => { if(e.key==='Enter') submitEmailScreen(); });
+  document.getElementById('pw-inp').addEventListener('keydown',   e => { if(e.key==='Enter') submitEmailScreen(); });
+}
+
+async function submitEmailScreen() {
+  const errEl = document.getElementById('email-screen-error');
+  const btn   = document.getElementById('email-next-btn');
+  const spin  = document.getElementById('email-spinner');
+  errEl.style.display = 'none';
+
+  if (gEmailScreenStep === 'email') {
+    const email = document.getElementById('email-inp').value.trim().toLowerCase();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      errEl.textContent='יש להזין כתובת דוא"ל תקינה.'; errEl.style.display='block'; return;
+    }
+    btn.disabled=true; spin.style.display='block';
+    try {
+      const res = await apiGet({ action:'getState', email });
+      spin.style.display='none'; btn.disabled=false;
+      const pwGroup=document.getElementById('pw-group');
+      const pwLabel=document.getElementById('pw-label');
+      const pwHint =document.getElementById('pw-hint');
+      const pwInp  =document.getElementById('pw-inp');
+      if (res.isNew) {
+        pwLabel.textContent='בחרו סיסמה';
+        pwHint.textContent='המציאו סיסמה משלכם — לא הסיסמה של האימייל!';
+        pwInp.placeholder='סיסמה חדשה'; pwInp.autocomplete='new-password';
+      } else {
+        pwLabel.textContent='סיסמה';
+        pwHint.textContent='הזינו את הסיסמה שבחרתם בפעם הראשונה.';
+        pwInp.placeholder='הסיסמה שלי'; pwInp.autocomplete='current-password';
+      }
+      pwInp.value=''; show('pw-group','block'); pwInp.focus();
+      gEmailScreenStep='password'; btn.textContent='כניסה ←';
+    } catch(e) {
+      spin.style.display='none'; btn.disabled=false;
+      errEl.textContent='שגיאת רשת. בדקו חיבור לאינטרנט.'; errEl.style.display='block';
+    }
+
+  } else {
+    const email    = document.getElementById('email-inp').value.trim().toLowerCase();
+    const password = document.getElementById('pw-inp').value;
+    if (!password || password.length < 3) {
+      errEl.textContent='הסיסמה חייבת להכיל לפחות 3 תווים.'; errEl.style.display='block'; return;
+    }
+    btn.disabled=true; spin.style.display='block';
+    try {
+      const res = await apiPost({ action:'verifyOrSetPassword', email, password });
+      if (!res.ok) {
+        spin.style.display='none'; btn.disabled=false;
+        errEl.textContent = res.error==='wrong password' ? 'סיסמה שגויה. נסו שוב.' : 'שגיאה, נסו שוב.';
+        errEl.style.display='block'; return;
+      }
+      const state = await apiGet({ action:'getState', email });
+      spin.style.display='none';
+      gEmail=email; gAnswers=state.answers||{}; gSubmitted=state.submitted;
+      gScore=state.score; gFirstName=state.firstName||''; gLastName=state.lastName||''; gVersion=state.version||null;
+      hide('email-screen');
+      if (gSubmitted) { showSuccess(); return; }
+      if (gFirstName && gVersion) { showApp(); return; }
+      showProfileGate();
+    } catch(e) {
+      spin.style.display='none'; btn.disabled=false;
+      errEl.textContent='שגיאת רשת. בדקו חיבור לאינטרנט.'; errEl.style.display='block';
+    }
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// PROFILE GATE
+// ══════════════════════════════════════════════════════════════
+function showProfileGate() {
+  document.getElementById('profile-email-display').textContent = gEmail;
+  if (gFirstName) document.getElementById('inp-first').value = gFirstName;
+  if (gLastName)  document.getElementById('inp-last').value  = gLastName;
+  if (gVersion) {
+    pickVer(gVersion);
+    document.getElementById('btn-ver-a').disabled = true;
+    document.getElementById('btn-ver-b').disabled = true;
+  }
+  show('profile-screen','flex');
+}
+
+function pickVer(v) {
+  gPendingVer=v;
+  document.getElementById('btn-ver-a').classList.toggle('chosen',v==='א');
+  document.getElementById('btn-ver-b').classList.toggle('chosen',v==='ב');
+}
+
+async function confirmProfile() {
+  const first  = document.getElementById('inp-first').value.trim();
+  const last   = document.getElementById('inp-last').value.trim();
+  const errEl  = document.getElementById('gate-error');
+  const btn    = document.getElementById('confirm-btn');
+  let err='';
+  if (!first||!last) err='יש למלא שם פרטי ושם משפחה.';
+  else if (!(gPendingVer||gVersion)) err='יש לבחור טור (א או ב).';
+  if (err) { errEl.textContent=err; errEl.style.display='block'; return; }
+  errEl.style.display='none';
+  btn.disabled=true; btn.textContent='שומר...';
+  try {
+    const res = await apiPost({ action:'setProfile', firstName:first, lastName:last, email:gEmail, version:gPendingVer||gVersion });
+    if (res.ok || res.locked) {
+      gFirstName=first; gLastName=last;
+      gVersion = res.locked ? res.version : (gPendingVer||gVersion);
+      hide('profile-screen'); showApp();
+    } else if (res.alreadySubmitted) {
+      gFirstName=first; gLastName=last; hide('profile-screen'); showSuccess();
+    } else {
+      btn.disabled=false; btn.textContent='כניסה ←';
+      errEl.textContent='שגיאה בשמירה, נסו שוב.'; errEl.style.display='block';
+    }
+  } catch(e) {
+    btn.disabled=false; btn.textContent='כניסה ←';
+    errEl.textContent='שגיאת רשת. בדקו חיבור לאינטרנט.'; errEl.style.display='block';
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// RENDER QUIZ
+// ══════════════════════════════════════════════════════════════
+function showApp() {
+  document.getElementById('app-name').textContent  = gFirstName+' '+gLastName;
+  document.getElementById('app-email').textContent = gEmail;
+  document.getElementById('app-ver').textContent   = 'טור '+gVersion;
+  show('app','block'); renderSegments(); updateProgress();
+}
+
+function renderSegments() {
+  const container=document.getElementById('quiz-body');
+  container.innerHTML='';
+  if (gSubmitted) {
+    const b=document.createElement('div'); b.className='submitted-banner';
+    b.textContent='✅ הטופס נשלח — ציון: '+gScore; container.appendChild(b);
+  }
+  QUIZ_DEF[gVersion].forEach((seg,si) => {
+    const card=document.createElement('div'); card.className='segment'; card.style.animationDelay=(si*.05)+'s';
+    card.innerHTML=`<div class="seg-header"><div class="seg-num">${seg.num}</div><div class="seg-title">קטע ${seg.num}</div></div><div class="seg-body" id="body-${si}"></div>`;
+    container.appendChild(card);
+    const body=document.getElementById('body-'+si);
+    seg.qs.forEach(q => {
+      const block=document.createElement('div'); block.className='q-block';
+      const saved=gAnswers[q.id]||null; const ca=ANSWER_KEYS[q.id];
+      const isOk=v=>Array.isArray(ca)?ca.includes(v):v===ca;
+      block.innerHTML=`<div class="q-label"><span>${q.icon}</span>${q.label}</div><div class="options" id="opts-${q.id}"></div>`;
+      const optsDiv=block.querySelector(`#opts-${q.id}`);
+      q.opts.forEach(opt => {
+        const btn=document.createElement('button'); btn.className='opt-btn'; btn.textContent=opt;
+        if (gSubmitted) {
+          if (isOk(opt)) btn.classList.add('correct-ans');
+          else if (opt===saved&&!isOk(saved)) btn.classList.add('wrong-ans');
+          btn.disabled=true;
+        } else {
+          if (opt===saved) btn.classList.add('selected');
+          btn.addEventListener('click',()=>pick(btn,q.id,opt,optsDiv));
+        }
+        optsDiv.appendChild(btn);
+      });
+      body.appendChild(block);
+    });
+  });
+  if (gSubmitted) hide('submit-bar');
+}
+
+// ══════════════════════════════════════════════════════════════
+// INTERACTION
+// ══════════════════════════════════════════════════════════════
+function pick(btn,key,val,optsDiv) {
+  optsDiv.querySelectorAll('.opt-btn').forEach(b=>b.classList.remove('selected'));
+  btn.classList.add('selected'); gAnswers[key]=val; updateProgress(); autoSave(key,val);
+}
+
+let saveTimer=null;
+function autoSave(key,val) {
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(async () => {
+    try {
+      await apiPost({ action:'saveAnswer', email:gEmail, key, value:val });
+      showToast('נשמר ✓');
+    } catch(e) { showToast('שגיאת שמירה ✗'); }
+  }, 600);
+}
+
+function showToast(msg) {
+  const t=document.getElementById('save-toast'); t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),1800);
+}
+
+function updateProgress() {
+  let total=0,done=0;
+  QUIZ_DEF[gVersion].forEach(seg=>seg.qs.forEach(q=>{total++;if(gAnswers[q.id])done++;}));
+  const pct=total?Math.round(done/total*100):0;
+  document.getElementById('progress-fill').style.width=pct+'%';
+  document.getElementById('progress-label').textContent=done+' מתוך '+total+' שאלות נענו';
+  document.getElementById('submit-btn').disabled=(done<total);
+}
+
+// ══════════════════════════════════════════════════════════════
+// SUBMIT
+// ══════════════════════════════════════════════════════════════
+async function submitQuiz() {
+  const missing=[];
+  QUIZ_DEF[gVersion].forEach((seg,si)=>seg.qs.forEach(q=>{if(!gAnswers[q.id])missing.push('קטע '+(si+1)+' — '+q.label);}));
+  if (missing.length) { alert('יש לענות על כל השאלות:\n\n'+missing.join('\n')); return; }
+  const btn=document.getElementById('submit-btn'); btn.disabled=true; btn.textContent='שולח...';
+  try {
+    const res = await apiPost({ action:'submitQuiz', email:gEmail, answers:gAnswers, version:gVersion });
+    if (res.ok || res.alreadySubmitted) {
+      gSubmitted=true; if(res.score) gScore=res.score; showSuccess();
+    } else { btn.disabled=false; btn.textContent='📤 שליחת הטופס'; alert('שגיאה בשליחה, נסו שוב.'); }
+  } catch(e) { btn.disabled=false; btn.textContent='📤 שליחת הטופס'; alert('שגיאת רשת. בדקו חיבור לאינטרנט.'); }
+}
+
+// ══════════════════════════════════════════════════════════════
+// SUCCESS + REVIEW
+// ══════════════════════════════════════════════════════════════
+function showSuccess() {
+  hide('app'); hide('loading'); hide('profile-screen'); hide('email-screen');
+  show('success-screen','flex');
+  document.getElementById('success-name').textContent    = gFirstName+' '+gLastName;
+  document.getElementById('success-email-disp').textContent = gEmail;
+  document.getElementById('success-ver').textContent     = 'טור '+gVersion;
+  document.getElementById('score-display').textContent   = gScore||'';
+  buildReview();
+}
+
+function buildReview() {
+  const container=document.getElementById('review-container');
+  container.innerHTML='<h3>סיכום תשובות</h3>';
+  QUIZ_DEF[gVersion].forEach((seg,si)=>{
+    const gradedQs=seg.qs; let segCorrect=0;
+    gradedQs.forEach(q=>{ const ca=ANSWER_KEYS[q.id]; const given=gAnswers[q.id]||'';
+      if(ca&&(Array.isArray(ca)?ca.includes(given):given===ca))segCorrect++; });
+    const block=document.createElement('div'); block.className='review-segment';
+    block.innerHTML=`<div class="review-seg-header"><div class="review-seg-num">${seg.num}</div>קטע ${seg.num}<span style="margin-right:auto;font-size:.8rem;opacity:.85">${segCorrect}/${gradedQs.length}</span></div><div class="review-body" id="rbody-${si}"></div>`;
+    container.appendChild(block);
+    const body=document.getElementById('rbody-'+si);
+    gradedQs.forEach(q=>{ const ca=ANSWER_KEYS[q.id]; const given=gAnswers[q.id]||'—';
+      const ok=ca&&(Array.isArray(ca)?ca.includes(given):given===ca);
+      const caDisplay=Array.isArray(ca)?ca.join(' / '):(ca||'—');
+      const row=document.createElement('div'); row.className='review-row';
+      row.innerHTML=`<span class="review-label">${q.icon} ${q.label}</span><span class="review-answer"><span class="review-given ${ok?'ok':'bad'}">${ok?'✓':'✗'} ${given}</span>${!ok&&ca?`<span class="review-correct-hint">✓ ${caDisplay}</span>`:''}</span>`;
+      body.appendChild(row); });
+  });
+}
+
+function show(id,d){document.getElementById(id).style.display=d||'block'}
+function hide(id){document.getElementById(id).style.display='none'}
+function showError(msg){hide('loading');show('error-screen','flex');document.getElementById('error-msg').textContent=msg}
+</script>
+</body>
+</html>
