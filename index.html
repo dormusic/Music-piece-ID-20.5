@@ -238,7 +238,7 @@ body{font-family:'Assistant',sans-serif;background:var(--bg);color:var(--text);
 // ══════════════════════════════════════════════════════════════
 // CONFIG — paste your Apps Script /exec URL here
 // ══════════════════════════════════════════════════════════════
-const API = 'https://script.google.com/macros/s/AKfycbwwNDWBwJQzJ4yptLchl82okNLIn2FCjtZA_vbc2BBAPw1iiW6uTlQg1Q1wIw4Ql_l2/exec';
+const API = 'PASTE_YOUR_APPS_SCRIPT_URL_HERE';
 
 // ══════════════════════════════════════════════════════════════
 // API HELPER — JSONP (bypasses CORS and redirect issues)
@@ -408,16 +408,16 @@ async function submitEmailScreen() {
     }
     btn.disabled=true; spin.style.display='block';
     try {
+      // Single call: verify password + get full state together
       const res = await api({ action:'verifyOrSetPassword', email, password });
+      spin.style.display='none';
       if (!res.ok) {
-        spin.style.display='none'; btn.disabled=false;
+        btn.disabled=false;
         errEl.textContent = res.error==='wrong password' ? 'סיסמה שגויה. נסו שוב.' : 'שגיאה, נסו שוב.';
         errEl.style.display='block'; return;
       }
-      const state = await api({ action:'getState', email });
-      spin.style.display='none';
-      gEmail=email; gAnswers=state.answers||{}; gSubmitted=state.submitted;
-      gScore=state.score; gFirstName=state.firstName||''; gLastName=state.lastName||''; gVersion=state.version||null;
+      gEmail=email; gAnswers=res.answers||{}; gSubmitted=res.submitted;
+      gScore=res.score; gFirstName=res.firstName||''; gLastName=res.lastName||''; gVersion=res.version||null;
       hide('email-screen');
       if (gSubmitted) { showSuccess(); return; }
       if (gFirstName && gVersion) { showApp(); return; }
